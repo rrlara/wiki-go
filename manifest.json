@@ -1,0 +1,14 @@
+{
+  "name": "Leap Spot Leap",
+  "short_name": "LSL",
+  "icons": [
+    {
+      "src": "static/icon-lsl.png",
+      "sizes": "152x152",
+      "type": "image/png"
+    }],
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#000",
+  "theme_color": "#000"
+}

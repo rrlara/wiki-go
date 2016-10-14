@@ -1,11 +1,82 @@
 <!DOCTYPE html>
-<html>
+<html id="app">
   <head>
+
+    <meta name="apple-mobile-web-app-capable" content="yes">
+
+    <meta property="og:url"                content="http://leapspotleap.com" />
+    <!--<meta property="og:type"               content="article" />-->
+    <meta name="description" content="A simple way to look up wikipedia articles near you. Or simply leap to a place and find interesting information.">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:creator" content="@rrlara">
+    <meta property="og:title"              content="Where will you leap and explore: An Interactive Map" />
+    <meta property="og:description"        content="A simple way to look up wikipedia articles near you. Or simply leap to a place and find interesting information." />
+
+    <meta name="twitter:image" content="https://s3-us-west-2.amazonaws.com/www.leapspotleap.com/static/preview.png">
+    
+    <meta property="og:image"              content="https://s3-us-west-2.amazonaws.com/www.leapspotleap.com/static/preview.png" />
+    <meta property="og:image:width"              content="1169" />
+    <meta property="og:image:height"              content="500" />
+
+    <meta content='493101697546062' property='fb:app_id'/>
+
     <meta charset="utf-8">
-    <title>wiki-go</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+    <link href='https://cdnjs.cloudflare.com/ajax/libs/bulma/0.2.1/css/bulma.min.css' rel='stylesheet' />
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
+    
+    <!-- <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.22.1/mapbox-gl.css' rel='stylesheet' /> -->
+
+    <link href='https://api.mapbox.com/mapbox-gl-js/v0.24.0/mapbox-gl.css' rel='stylesheet' />
+    
+
+    <link href='https://fonts.googleapis.com/css?family=Raleway:400,700' rel='stylesheet' type='text/css'>
+
+    <link rel="shortcut icon" type="image/png" href="./static/marker.png"/>
+
+
+    <link rel="manifest" href="./manifest.json">
+
+    <!-- Add to home screen for Safari on iOS -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Leap Spot Leap">
+    <link rel="apple-touch-icon" href="./static/icon-lsl.png">
+
+    <!--  -->
+    <meta name="msapplication-TileImage" content="./static/icon-lsl.png">
+    <meta name="msapplication-TileColor" content="#2F3BA2">
+    
+    <title>LeapSpotLeap</title>
   </head>
   <body>
-    <app></app>
+    <div id="app">
+      <app></app>
+    </div>
+
+    
+
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-46842357-3', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+
+    
+    
+
+        <!-- <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.22.1/mapbox-gl.js'></script> -->
+
+        <script src='https://api.mapbox.com/mapbox-gl-js/v0.24.0/mapbox-gl.js'></script>
+
     <!-- built files will be auto injected -->
   </body>
 </html>
