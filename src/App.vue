@@ -338,7 +338,7 @@ body{
 
 .modalClose {
     height: 25px;
-    margin-top: 20px;
+    margin-top: 14px;
     width: 25px;
     position: relative;
     /*top: 50%;

@@ -399,7 +399,7 @@ import Modalimage from './modalimage'
  .modal-full-wrapper input {
     /*width: 100%;*/
     height: 20px;
-    font-size: 14px;
+    font-size: 16px;
     color: #2c3e50;
     line-height: 0.428571;
     box-shadow: inset 0 1px 4px rgba(0,0,0,.4);

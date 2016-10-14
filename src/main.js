@@ -67,7 +67,7 @@ router.start({
 }, '#app')
 
 
-// //directives
+// //directives for social media
 Vue.directive('twitter', function () {
 
     this.el.addEventListener('click', function () {
