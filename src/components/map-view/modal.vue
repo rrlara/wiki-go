@@ -16,7 +16,15 @@
                         <i class="fa fa-clone" aria-hidden="true"></i>
                       </div>
 
-                      <img width="100%" style="max-width: none;" src="{{activeCall.properties.image.value | replaceHttp }}?width=600" alt="Smiley face" v-cloak>
+                      <button class="groupPager groupPagerPrev" @click.prevent="previousGroupedImage()" v-show="hasGroupedImages">
+                        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+                      </button>
+                      <button class="groupPager groupPagerNext" @click.prevent="nextGroupedImage()" v-show="hasGroupedImages">
+                        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+                      </button>
+                      <span class="groupCounter" v-show="hasGroupedImages">{{groupedImageIndex + 1}} of {{groupedImages.length}}</span>
+
+                      <img width="100%" style="max-width: none;" src="{{currentImageUrl | replaceHttp }}?width=600" alt="Smiley face" v-cloak>
                       </div>
 
                   </div>
@@ -83,6 +91,7 @@ import Modalimage from './modalimage'
           return {
              showFullImage: false,
              imageHeight: null,
+             groupedImageIndex: 0,
              images: []
           }
         },
@@ -124,6 +133,19 @@ import Modalimage from './modalimage'
         },
          
         computed: {
+          groupedImages(){
+            if (this.activeCall.properties.groupImages && this.activeCall.properties.groupImages.length > 0) {
+              return this.activeCall.properties.groupImages;
+            }
+
+            return [this.activeCall.properties.image.value];
+          },
+          hasGroupedImages(){
+            return this.groupedImages.length > 1;
+          },
+          currentImageUrl(){
+            return this.groupedImages[this.groupedImageIndex] || this.activeCall.properties.image.value;
+          },
           postInfo(){
             var self = this;
             var postInfo = {}
@@ -146,6 +168,21 @@ import Modalimage from './modalimage'
           }
         },
         methods:{
+          previousGroupedImage: function () {
+            if (!this.hasGroupedImages) {
+              return;
+            }
+
+            this.groupedImageIndex = this.groupedImageIndex === 0 ? this.groupedImages.length - 1 : this.groupedImageIndex - 1;
+          },
+
+          nextGroupedImage: function () {
+            if (!this.hasGroupedImages) {
+              return;
+            }
+
+            this.groupedImageIndex = this.groupedImageIndex === this.groupedImages.length - 1 ? 0 : this.groupedImageIndex + 1;
+          },
 
           getListOfImages: function () {
 
@@ -302,7 +339,9 @@ import Modalimage from './modalimage'
 
         },  
         watch:{
-          
+          'activeCall': function(){
+            this.groupedImageIndex = 0;
+          }
         }
 
     };
@@ -460,6 +499,40 @@ import Modalimage from './modalimage'
 .gallery i{
   color: #fff;
   text-shadow: 1px 2px 3px #666;
+}
+
+.groupPager {
+  position: absolute;
+  top: 50%;
+  z-index: 11;
+  width: 38px !important;
+  height: 38px;
+  margin: 0 !important;
+  border: 1px solid rgba(255,255,255,0.8);
+  border-radius: 50%;
+  background-color: rgba(0,0,0,0.35);
+  color: #fff;
+  transform: translateY(-50%);
+}
+
+.groupPagerPrev {
+  left: 10px;
+}
+
+.groupPagerNext {
+  right: 10px;
+}
+
+.groupCounter {
+  position: absolute;
+  right: 14px;
+  bottom: 12px;
+  z-index: 11;
+  padding: 4px 8px;
+  border-radius: 10px;
+  background-color: rgba(0,0,0,0.45);
+  color: #fff;
+  font-size: 12px;
 }
 
 

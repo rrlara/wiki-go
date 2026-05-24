@@ -70,6 +70,7 @@ export default {
       myLocation: state => state.myLocation,
       showSidebar: state => state.sidebarShow,
       foundMe: state => state.foundMe,
+      showLocationError: state => state.showLocationError,
       favoritesList: state => state.favoritesList
   },
     actions: {
@@ -96,6 +97,11 @@ export default {
   watch: {
     'myLocation': function(){
       this.showSpinner = false;
+    },
+    'showLocationError': function(){
+      if (this.showLocationError) {
+        this.showSpinner = false;
+      }
     },
     // 'activeLayers': function(){
     //   var self = this;

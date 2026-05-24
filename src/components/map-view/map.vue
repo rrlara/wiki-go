@@ -39,6 +39,28 @@ var myMarkerLocation;
 
 var popup;
 
+var resizeTimeouts = [];
+
+function resizeMap() {
+  if (map) {
+    map.resize();
+  }
+}
+
+function resizeMapSoon() {
+  resizeMap();
+
+  resizeTimeouts.forEach(function(timeout) {
+    clearTimeout(timeout);
+  });
+
+  resizeTimeouts = [
+    setTimeout(resizeMap, 100),
+    setTimeout(resizeMap, 350),
+    setTimeout(resizeMap, 1000)
+  ];
+}
+
 var activeCalls = {
 
   'active': '#cc0000',
@@ -99,10 +121,13 @@ export default {
     },
     'changeLocation': function(){
       var self = this;
-              map.panTo([self.changeLocation.coordinates[0], self.changeLocation.coordinates[1]],
-                {
-                  zoom: 12,
-                });
+              resizeMapSoon();
+              map.flyTo({
+                center: [self.changeLocation.coordinates[0], self.changeLocation.coordinates[1]],
+                zoom: 12
+              });
+              setTimeout(resizeMapSoon, 500);
+              setTimeout(resizeMapSoon, 1200);
     },
         'satellite': function(){
           var self = this;
@@ -270,6 +295,10 @@ export default {
 
     }, false);
 
+    window.addEventListener('resize', resizeMapSoon);
+    window.addEventListener('orientationchange', resizeMapSoon);
+    document.addEventListener('visibilitychange', resizeMapSoon);
+
 
     
 
@@ -312,9 +341,17 @@ export default {
     // disable map rotation using touch rotation gesture
     map.touchZoomRotate.disableRotation();
 
+    map.getCanvas().addEventListener('touchmove', function(e) {
+            e.preventDefault();
+    }, false);
+
+    resizeMapSoon();
+
     map.on('load', function () {
         // console.log("map has been loaded:");
         var selfself = self;
+
+        resizeMapSoon();
         
         selfself.mapLoaded();
 
@@ -349,6 +386,8 @@ export default {
 
 
     map.on('style.load', function () {
+
+                    resizeMapSoon();
 
                     var self = this;
 
@@ -520,6 +559,15 @@ export default {
     resetData: function(){
       this.resetWikiData()
     }
+  },
+  beforeDestroy: function() {
+    window.removeEventListener('resize', resizeMapSoon);
+    window.removeEventListener('orientationchange', resizeMapSoon);
+    document.removeEventListener('visibilitychange', resizeMapSoon);
+
+    resizeTimeouts.forEach(function(timeout) {
+      clearTimeout(timeout);
+    });
   }
 }
 </script>
@@ -540,6 +588,14 @@ export default {
       -moz-transition: margin-left .4s cubic-bezier(0.25, .8, .25, 1);
       -o-transition: margin-left .4s cubic-bezier(0.25, .8, .25, 1);
       transition: margin-left .4s cubic-bezier(0.25, .8, .25, 1);
+    touch-action: none;
+    -ms-touch-action: none;
+    overscroll-behavior: none;
+}
+
+.map-view #map .mapboxgl-canvas {
+    touch-action: none;
+    -ms-touch-action: none;
 }
 
 .map-view .sideBarActive{

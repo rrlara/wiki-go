@@ -10,6 +10,11 @@
       Oops! Zoom in some more or search for a location. Try again!!
     </div>
 
+    <div class="notification is-primary location-notification" v-show="showLocationError">
+      <button class="delete" @click="closeLocationMessage"></button>
+      {{locationErrorMessage}}
+    </div>
+
     <!-- <ui-alert text="Loading map" :show="mapHasNotLoaded"></ui-alert> -->
 
     <!-- <div v-show="mapHasNotLoaded">Loading map</div> -->
@@ -80,7 +85,7 @@
 <script>
 import map from "./map"
 
-import { toggleError, toggleSidebar, toggleTooZoomedOut, toggleSearch, toggleFavorites, toggleShare } from '../../vuex/actions'
+import { toggleError, toggleSidebar, toggleTooZoomedOut, toggleSearch, toggleFavorites, toggleShare, hideLocationError } from '../../vuex/actions'
 
 export default {
   name: "Map-View",
@@ -98,6 +103,8 @@ export default {
       showShare: state => state.showShare,
       showErrorMsg: state => state.showError,
       showTooZoomedOutMsg: state => state.showTooZoomedOut,
+      showLocationError: state => state.showLocationError,
+      locationErrorMessage: state => state.locationErrorMessage,
       mapHasNotLoaded: state => state.mapHasNotLoaded,
       showHome: state => state.showHome,
       showSidebar: state => state.sidebarShow,
@@ -109,7 +116,8 @@ export default {
       toggleTooZoomedOut,
       toggleSearch,
       toggleFavorites,
-      toggleShare
+      toggleShare,
+      hideLocationError
     }
   },
   computed: {
@@ -158,6 +166,10 @@ export default {
     closeTooZoomedOutMessage(){
         var self = this;
         self.toggleTooZoomedOut();
+    },
+    closeLocationMessage(){
+        var self = this;
+        self.hideLocationError();
     }
   }
 }
@@ -191,7 +203,7 @@ export default {
 }​
 
 .map-view {
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
     bottom:0;
@@ -200,13 +212,18 @@ export default {
     background-color: gray;
 }
 .map-view #map {
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
+    bottom: 0;
+    right: 0;
     height: 100%;
     width: 100%;
     z-index: 0;
     background-color: gray;
+    touch-action: none;
+    -ms-touch-action: none;
+    overscroll-behavior: none;
 }
 .layout-blur {
     -webkit-filter: blur(2px);

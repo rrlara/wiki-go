@@ -17,11 +17,11 @@
            @keydown.up="up"
            @keydown.enter="hit"
            @keydown.esc="reset"
-           @blur="reset"
+           @blur="resetLater"
            @input="update | debounce 500"/>
 
     <ul v-show="hasItems">
-        <li v-for="item in items" :class="activeClass($index)" @mousedown="hit" @mousemove="setActive($index)">
+        <li v-for="item in items" :class="activeClass($index)" @click.prevent="selectItem(item)" @mousedown.prevent="selectItem(item)" @touchend.prevent="selectItem(item)" @mousemove="setActive($index)">
             <span class="name" v-text="item.place_name"></span>
             <span class="screen-name" >revelance: {{item.relevance}}</span>
         </li>
@@ -29,7 +29,7 @@
     <span class="previousPlaceText">Previous locations</span>
     <ul v-show="!hasItems">
         <!-- <span class="previousPlaceText">Previous places searched</span> -->
-        <li v-for="item in previousSearch" @click="hitPrevious(item)">
+        <li v-for="item in previousSearch" @click.prevent="hitPrevious(item)" @mousedown.prevent="hitPrevious(item)" @touchend.prevent="hitPrevious(item)">
             <span class="name" v-text="item.name"></span>
         </li>
     </ul>
@@ -127,6 +127,14 @@ export default {
       this.loading = false
     },
 
+    resetLater () {
+      var self = this;
+
+      setTimeout(function () {
+        self.reset();
+      }, 200)
+    },
+
     setActive (index) {
       this.current = index
     },
@@ -137,37 +145,49 @@ export default {
       }
     },
 
-    hit () {
+    selectPlace (name, geometry, shouldSave) {
+      var self = this;
+
+      this.reset();
+      this.isSearching();
+      this.resetWikiData();
+
+      if (shouldSave) {
+        var saveLocation = {}
+
+        saveLocation.name = name;
+        saveLocation.geometry = geometry;
+
+        self.saveSearchPlace(saveLocation);
+      }
+
+      setTimeout(function () {
+        self.searchChangeLocation(geometry);
+      }, 450)
+    },
+
+    selectItem (item) {
+      this.selectPlace(item.place_name, item.geometry, true);
+    },
+
+    hit (index) {
+      if (typeof index === 'number') {
+        this.current = index
+      }
+
       if (this.current === -1) return
 
         var self = this;
 
       // this.onHit(this.items[this.current])
 
-      self.searchChangeLocation(this.items[this.current].geometry);
-
-      var saveLocation = {}
-
-      saveLocation.name = this.items[this.current].place_name;
-      saveLocation.geometry = this.items[this.current].geometry;
-
-      self.saveSearchPlace(saveLocation);
-
-      this.resetWikiData();
-
-      this.isSearching();
+      this.selectItem(this.items[this.current]);
       
     },
 
     hitPrevious(item) {
 
-      var self = this;
-
-      self.searchChangeLocation(item.geometry);
-
-      this.resetWikiData()
-      
-      this.isSearching()
+      this.selectPlace(item.name, item.geometry, false);
 
       
 

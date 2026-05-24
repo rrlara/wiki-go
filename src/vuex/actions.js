@@ -16,6 +16,159 @@ Vue.use(VueResource)
 
 
 var wikiAPI = "https://dbpedia.org/sparql/?default-graph-uri=http://dbpedia.org"
+var wikipediaAPI = "https://en.wikipedia.org/w/api.php"
+var WIKIPEDIA_TITLE_BATCH_SIZE = 50
+
+function getWikipediaTitle(feature) {
+  if (!feature.properties || !feature.properties.link || !feature.properties.link.value) {
+    return null
+  }
+
+  var match = feature.properties.link.value.match(/\/wiki\/(.+)$/)
+
+  if (!match) {
+    return null
+  }
+
+  return decodeURIComponent(match[1]).replace(/_/g, ' ')
+}
+
+function setLiteralValue(item, key, value) {
+  if (item.properties[key]) {
+    item.properties[key].value = value
+  } else {
+    item.properties[key] = {
+      type: 'literal',
+      value: value
+    }
+  }
+}
+
+function addTitleAlias(titleToFeatures, from, to) {
+  if (titleToFeatures[from] && !titleToFeatures[to]) {
+    titleToFeatures[to] = titleToFeatures[from]
+  }
+}
+
+function fetchWikipediaExtracts(features) {
+  var titleToFeatures = {}
+  var titles = []
+
+  features.forEach(function(feature) {
+    var title = getWikipediaTitle(feature)
+
+    if (!title) {
+      return
+    }
+
+    if (!titleToFeatures[title]) {
+      titleToFeatures[title] = []
+      titles.push(title)
+    }
+
+    titleToFeatures[title].push(feature)
+  })
+
+  var requests = []
+
+  for (var i = 0; i < titles.length; i += WIKIPEDIA_TITLE_BATCH_SIZE) {
+    requests.push(Vue.http({
+      url: wikipediaAPI,
+      method: 'GET',
+      data: {
+        action: 'query',
+        prop: 'extracts',
+        exintro: 1,
+        explaintext: 1,
+        redirects: 1,
+        format: 'json',
+        origin: '*',
+        titles: titles.slice(i, i + WIKIPEDIA_TITLE_BATCH_SIZE).join('|')
+      }
+    }).then(function(response) {
+      var query = response.data.query || {}
+      var pages = query.pages || {}
+
+      if (query.normalized) {
+        query.normalized.forEach(function(item) {
+          addTitleAlias(titleToFeatures, item.from, item.to)
+        })
+      }
+
+      if (query.redirects) {
+        query.redirects.forEach(function(item) {
+          addTitleAlias(titleToFeatures, item.from, item.to)
+        })
+      }
+
+      Object.keys(pages).forEach(function(pageId) {
+        var page = pages[pageId]
+        var matchedFeatures = titleToFeatures[page.title]
+
+        if (!matchedFeatures) {
+          return
+        }
+
+        matchedFeatures.forEach(function(feature) {
+          if (page.extract) {
+            setLiteralValue(feature, 'abstract', page.extract)
+          }
+
+          if (page.pageid) {
+            setLiteralValue(feature, 'wikiPageID', page.pageid.toString())
+          }
+        })
+      })
+    }))
+  }
+
+  return Promise.all(requests).then(function() {
+    return features
+  }, function() {
+    return features
+  })
+}
+
+function groupDuplicateFeatures(features) {
+  var featureByName = {}
+  var groupedFeatures = []
+
+  features.forEach(function(feature) {
+    var name = feature.properties.idx
+
+    if (!featureByName[name]) {
+      feature.properties.groupCount = 1
+      feature.properties.groupImages = []
+      feature.properties.groupThumbnails = []
+
+      if (feature.properties.image && feature.properties.image.value) {
+        feature.properties.groupImages.push(feature.properties.image.value)
+      }
+
+      if (feature.properties.thumbnail && feature.properties.thumbnail.value) {
+        feature.properties.groupThumbnails.push(feature.properties.thumbnail.value)
+      }
+
+      featureByName[name] = feature
+      groupedFeatures.push(feature)
+      return
+    }
+
+    var groupedFeature = featureByName[name]
+
+    groupedFeature.properties.groupCount += 1
+
+    if (feature.properties.image && feature.properties.image.value) {
+      groupedFeature.properties.groupImages.push(feature.properties.image.value)
+    }
+
+    if (feature.properties.thumbnail && feature.properties.thumbnail.value) {
+      groupedFeature.properties.groupThumbnails.push(feature.properties.thumbnail.value)
+    }
+  })
+
+  return groupedFeatures
+}
 
 export const articleToggle = ( { dispatch }) => {
   dispatch('TOGGLE_ARTICLE')
@@ -33,6 +186,10 @@ export const toggleTooZoomedOut = ( { dispatch }) => {
 }
 export const toggleError = ( { dispatch }) => {
   dispatch('TOGGLE_ERROR')
+}
+
+export const hideLocationError = ( { dispatch }) => {
+  dispatch('HIDE_LOCATION_ERROR')
 }
 
 export const toggleShare = ({ dispatch }) => {
@@ -87,6 +244,8 @@ export const toggleSidebar = ({ dispatch }) => {
 export const toggleSearch = ({ dispatch }) => {
   dispatch('IS_SEARCHING')
 }
+
+export const isSearching = toggleSearch
 export const inDirectionMode = ({ dispatch }) => {
   dispatch('IN_DIRECTION_MODE')
 }
@@ -125,9 +284,6 @@ export const gotArticleOnLoad = ({ dispatch }, article) => {
 
 export const getWikiData = ({ dispatch }, map) => {
 
-  dispatch('GET_WIKI_DATA')
-
-
     // var wikiGeojson = Wiki.getWikiData(map);
         var map_bounds = map.getBounds();
 
@@ -136,12 +292,15 @@ export const getWikiData = ({ dispatch }, map) => {
         var north = map_bounds.getNorth();
         var east = map_bounds.getEast();
 
-        var query = "SELECT DISTINCT (str(?label) as ?label) ?lat ?lng ?abstract ?link ?thumbnail ?image ?wikiPageID "+
-        "WHERE {?res rdfs:label ?label. ?res <http://www.w3.org/2003/01/geo/wgs84_pos#lat> ?lat. ?res "+
-        "<http://www.w3.org/2003/01/geo/wgs84_pos#long> ?lng. ?res <http://dbpedia.org/ontology/abstract> "+
-        "?abstract. ?res foaf:isPrimaryTopicOf ?link. ?res <http://dbpedia.org/ontology/thumbnail> ?thumbnail."+
-        "?res foaf:depiction ?image.  ?res dbo:wikiPageID ?wikiPageID .FILTER ((?lng > "+west+" AND ?lng < "+east+" AND ?lat > "+south+" AND ?lat < "+north+") " +
-        "AND LANG(?label)='en' AND LANG(?abstract)='en' )} ORDER BY ?label Limit 250";
+        var query = "SELECT DISTINCT (str(?labelValue) as ?label) ?lat ?lng (str(COALESCE(?abstractValue, ?descriptionValue, \"\")) as ?abstract) ?link ?thumbnail ?image (str(COALESCE(?wikiPageIDValue, \"\")) as ?wikiPageID) "+
+        "WHERE {?res rdfs:label ?labelValue. ?res <http://www.w3.org/2003/01/geo/wgs84_pos#lat> ?lat. ?res "+
+        "<http://www.w3.org/2003/01/geo/wgs84_pos#long> ?lng. ?res foaf:isPrimaryTopicOf ?link. "+
+        "?res <http://dbpedia.org/ontology/thumbnail> ?thumbnail. ?res foaf:depiction ?image. "+
+        "OPTIONAL {?res <http://dbpedia.org/ontology/abstract> ?abstractValue. FILTER (LANG(?abstractValue)='en')} "+
+        "OPTIONAL {?res <http://dbpedia.org/ontology/description> ?descriptionValue. FILTER (LANG(?descriptionValue)='en')} "+
+        "OPTIONAL {?res dbo:wikiPageID ?wikiPageIDValue.} "+
+        "FILTER ((?lng > "+west+" AND ?lng < "+east+" AND ?lat > "+south+" AND ?lat < "+north+") " +
+        "AND LANG(?labelValue)='en' )} ORDER BY ?label Limit 250";
 
 
         if (map.getZoom() > 3.3){
@@ -204,37 +363,34 @@ export const getWikiData = ({ dispatch }, map) => {
             
             });
 
-          if (storeState.state.foundMe){
+          fetchWikipediaExtracts(updatedGeoJsonData.features).then(function() {
+            updatedGeoJsonData.features = groupDuplicateFeatures(updatedGeoJsonData.features)
 
-            var sortedList = updatedGeoJsonData.features.sort(function(a,b) {
-                    return a.properties.distance - b.properties.distance
-                });
+            if (storeState.state.foundMe){
 
-            updatedGeoJsonData.features = [];
+              var sortedList = updatedGeoJsonData.features.sort(function(a,b) {
+                      return a.properties.distance - b.properties.distance
+                  });
 
-            // console.table(sortedList);
+              updatedGeoJsonData.features = [];
 
-            updatedGeoJsonData.features = sortedList;
+              // console.table(sortedList);
 
-          }
+              updatedGeoJsonData.features = sortedList;
 
+            }
 
-          
+            // console.log("updatedGeoJsonData", updatedGeoJsonData.features);
+            // return wikiToGeosjonData;
+            dispatch('RECEIVED_WIKI_GEOJSON', updatedGeoJsonData)
 
+            // if (("Notification" in window)) {
+            //   // This browser does support desktop notification
+            //   notification.searchSuccess();
+            // }
 
-
-          // console.log("updatedGeoJsonData", updatedGeoJsonData.features);
-          // return wikiToGeosjonData;
-          dispatch('RECEIVED_WIKI_GEOJSON', updatedGeoJsonData)
-
-          // if (("Notification" in window)) {
-          //   // This browser does support desktop notification
-          //   notification.searchSuccess();
-          // }
-
-
-
-          storeState.state.showLoader = false;
+            storeState.state.showLoader = false;
+          })
 
           
       }, function (response) {

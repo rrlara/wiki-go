@@ -30,6 +30,8 @@ const state = {
   showShare: false,
   showError: false,
   showTooZoomedOut: false,
+  showLocationError: false,
+  locationErrorMessage: '',
   mapHasNotLoaded: true,
   showHome: false,
   noArticle: false
@@ -53,6 +55,10 @@ const mutations = {
   },
   TOGGLE_ERROR (state) {
     state.showError = !state.showError;
+  },
+  HIDE_LOCATION_ERROR (state) {
+    state.showLocationError = false;
+    state.locationErrorMessage = '';
   },
   TOGGLE_SHARE (state) {
     state.showShare = !state.showShare;
@@ -205,6 +211,25 @@ const mutations = {
   },
   GET_MY_LOCATION (state) {
     state.showLoader = true;
+    state.showLocationError = false;
+    state.locationErrorMessage = '';
+
+    function show_location_error(message) {
+      state.locationErrorMessage = message;
+      state.showLocationError = true;
+      state.showLoader = false;
+    }
+
+    if (!navigator.geolocation) {
+      show_location_error("Location is not available in this browser. You can still search for a place instead.");
+      return;
+    }
+
+    if (window.isSecureContext === false) {
+      show_location_error("Location needs a secure connection. Open this site with HTTPS, or search for a place instead.");
+      return;
+    }
+
     function geo_success(position) {
 
             var self = this;
@@ -228,18 +253,25 @@ const mutations = {
 
                     state.myLocation = loc;
                     state.foundMe = true;
+                    state.showLocationError = false;
+                    state.locationErrorMessage = '';
 
                     state.showLoader = false;
                   
                 }
 
-                function geo_error() {
-                  
-                  // alert("Sorry, no position available.");
+                function geo_error(error) {
+                  var message = "We could not get your location. You can search for a place instead.";
 
-                  state.showError = true;
+                  if (error && error.code === error.PERMISSION_DENIED) {
+                    message = "Location permission was denied. You can enable location access in your browser settings, or search for a place instead.";
+                  } else if (error && error.code === error.POSITION_UNAVAILABLE) {
+                    message = "Your location is unavailable right now. Try again, or search for a place instead.";
+                  } else if (error && error.code === error.TIMEOUT) {
+                    message = "Finding your location took too long. Try again, or search for a place instead.";
+                  }
 
-                  state.showLoader = false;
+                  show_location_error(message);
 
                 }
 

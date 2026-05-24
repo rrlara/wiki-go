@@ -22,12 +22,17 @@
     > -->
     <div class="card" v-for="item in publicCalls.features"
     id="mobile-{{item.properties.label.value}}"
-    v-touch:tap="updateActiveCall(item)"
+    @click="updateActiveCall(item)"
       :class="{activeMobile: activeCall.properties.idx === item.properties.idx}"
     >
 
     <div class="desktopViewButton" @click="updateActiveCall(item), showModal()">
       view
+    </div>
+
+    <div class="groupBadge" v-if="item.properties.groupCount > 1">
+      <i class="fa fa-clone" aria-hidden="true"></i>
+      <span>{{item.properties.groupCount}}</span>
     </div>
 
       <!-- <div class="card-image" style="background: url({{item.properties.thumbnail.value | replaceHttp}});"
@@ -45,6 +50,7 @@
 
         <div class="content">
           <small>{{ $index + 1 }} of {{publicCalls.features.length}}</small><br>
+          <small v-if="item.properties.groupCount > 1">{{item.properties.groupCount}} grouped records</small><br v-if="item.properties.groupCount > 1">
           <strong v-if="foundMe">{{updateDistances(item)}} &nbsp;<i class="fa fa-arrow-circle-right" 
             style="transform: rotate({{updateBearing(item)}}deg)"
             aria-hidden="true"
@@ -80,6 +86,7 @@ export default {
       myLocation: state => state.myLocation,
       publicCalls: state => state.publicCalls,
       foundMe: state => state.foundMe,
+      showLocationError: state => state.showLocationError,
       showSidebar: state => state.sidebarShow,
       activeCall: state => state.activeCall,
       showModalInfo: state => state.showModal,
@@ -128,6 +135,11 @@ export default {
         self.showSpinner = false;
       }
       
+    },
+    'showLocationError': function(){
+      if (this.showLocationError) {
+        this.showSpinner = false;
+      }
     }
   },
   data () {
@@ -233,12 +245,92 @@ export default {
   ready(){
 
     var initialWidth= document.documentElement.clientWidth
+    var listView = document.getElementById('mobile-list-view')
+    var startX = 0
+    var startY = 0
+    var startScrollLeft = 0
+    var mouseDragging = false
+    var pointerDragging = false
 
     // var self = this;
 
     if (initialWidth > 960){
 
         this.desktopClick = true;
+    }
+
+    if (listView) {
+      listView.addEventListener('touchstart', function(e) {
+        if (!e.touches || !e.touches.length) {
+          return
+        }
+
+        startX = e.touches[0].clientX
+        startY = e.touches[0].clientY
+        startScrollLeft = listView.scrollLeft
+        e.stopPropagation()
+      }, false)
+
+      listView.addEventListener('touchmove', function(e) {
+        if (!e.touches || !e.touches.length) {
+          return
+        }
+
+        var diffX = e.touches[0].clientX - startX
+        var diffY = e.touches[0].clientY - startY
+
+        if (Math.abs(diffX) > Math.abs(diffY)) {
+          listView.scrollLeft = startScrollLeft - diffX
+          e.preventDefault()
+          e.stopPropagation()
+        }
+      }, false)
+
+      listView.addEventListener('mousedown', function(e) {
+        mouseDragging = true
+        startX = e.clientX
+        startScrollLeft = listView.scrollLeft
+      }, false)
+
+      listView.addEventListener('mousemove', function(e) {
+        if (!mouseDragging) {
+          return
+        }
+
+        listView.scrollLeft = startScrollLeft - (e.clientX - startX)
+        e.preventDefault()
+      }, false)
+
+      listView.addEventListener('mouseup', function() {
+        mouseDragging = false
+      }, false)
+
+      listView.addEventListener('mouseleave', function() {
+        mouseDragging = false
+      }, false)
+
+      listView.addEventListener('pointerdown', function(e) {
+        pointerDragging = true
+        startX = e.clientX
+        startScrollLeft = listView.scrollLeft
+      }, false)
+
+      listView.addEventListener('pointermove', function(e) {
+        if (!pointerDragging) {
+          return
+        }
+
+        listView.scrollLeft = startScrollLeft - (e.clientX - startX)
+        e.preventDefault()
+      }, false)
+
+      listView.addEventListener('pointerup', function() {
+        pointerDragging = false
+      }, false)
+
+      listView.addEventListener('pointercancel', function() {
+        pointerDragging = false
+      }, false)
     }
 
   }
@@ -281,9 +373,14 @@ export default {
       -moz-transition: bottom .4s cubic-bezier(0.25, .8, .25, 1);
       -o-transition: bottom .4s cubic-bezier(0.25, .8, .25, 1);
       transition: bottom .4s cubic-bezier(0.25, .8, .25, 1);
-      overflow: auto;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-x;
+      -ms-touch-action: pan-x;
       height: 159px;
-      display: -webkit-inline-box;
+      display: flex;
+      flex-wrap: nowrap;
     }
 
   @media screen and (min-width: 767px) {
@@ -318,11 +415,14 @@ export default {
 
 .card{
   margin: 0px 10px;
+  flex: 0 0 calc(100vw - 40px);
+  max-width: 440px;
+  position: relative;
   border-radius: 10px;
   border: 2px solid rgba(79, 192, 141, 0.0);
   height: 150px;
   opacity: 0.8;
-  /*-webkit-overflow-scrolling: touch;*/
+  touch-action: pan-x;
 }
 
 .image img {
@@ -393,6 +493,27 @@ export default {
     font-size: 20px;
     cursor: pointer;
     text-shadow: 1px 2px 3px #666;
+}
+
+.groupBadge{
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  z-index: 2;
+  min-width: 38px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 12px;
+  background-color: rgba(79, 192, 141, 0.95);
+  color: #fff;
+  font-size: 13px;
+  line-height: 24px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.35);
+  text-align: center;
+}
+
+.groupBadge i{
+  margin-right: 4px;
 }
 
 </style>
