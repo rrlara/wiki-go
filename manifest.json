@@ -7,7 +7,7 @@
       "sizes": "152x152",
       "type": "image/png"
     }],
-  "start_url": "/index.html",
+  "start_url": "/wiki-go/",
   "display": "standalone",
   "background_color": "#000",
   "theme_color": "#000"
